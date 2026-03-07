@@ -929,33 +929,37 @@ export default function AgilePulsePage() {
                     {hasVoted ? 'Update Vote' : 'Submit Vote'}
                   </motion.button>
                 )}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleRevealVotes}
-                  disabled={isBusy || !activeStory || !!sessionView.summary}
-                  className="btn btn-secondary text-sm disabled:opacity-60"
-                >
-                  Reveal Votes
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleAdvanceRound}
-                  disabled={isBusy || !sessionView.summary}
-                  className="btn btn-secondary text-sm disabled:opacity-60"
-                >
-                  Re-vote
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleFinalize(sessionView.summary?.consensusValue ?? selectedVote)}
-                  disabled={isBusy || !activeStory || !sessionView.summary}
-                  className="btn btn-success text-sm disabled:opacity-60"
-                >
-                  Finalize Estimate
-                </motion.button>
+                {isOrganizer && (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleRevealVotes}
+                      disabled={isBusy || !activeStory || !!sessionView.summary}
+                      className="btn btn-secondary text-sm disabled:opacity-60"
+                    >
+                      Reveal Votes
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleAdvanceRound}
+                      disabled={isBusy || !sessionView.summary}
+                      className="btn btn-secondary text-sm disabled:opacity-60"
+                    >
+                      Re-vote
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleFinalize(sessionView.summary?.consensusValue ?? selectedVote)}
+                      disabled={isBusy || !activeStory || !sessionView.summary}
+                      className="btn btn-success text-sm disabled:opacity-60"
+                    >
+                      Finalize Estimate
+                    </motion.button>
+                  </>
+                )}
               </div>
 
               {/* PO timer controls */}
