@@ -257,7 +257,7 @@ exports.handler = async (event) => {
       myVote,
       summary,
       votedUserIds: activeVotes.map((v) => v.userId),
-      participantCount: session.participants.length,
+      participantCount: Math.max(0, session.participants.length - 1), // organizer doesn't vote
     });
   }
 

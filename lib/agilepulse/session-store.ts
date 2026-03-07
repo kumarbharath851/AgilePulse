@@ -409,7 +409,7 @@ function getSessionView(sessionId: string, userId?: string): SessionView | undef
     myVote,
     summary,
     votedUserIds: activeVotes.map((vote) => vote.userId),
-    participantCount: state.session.participants.length,
+    participantCount: Math.max(0, state.session.participants.length - 1), // organizer doesn't vote
   };
 }
 
