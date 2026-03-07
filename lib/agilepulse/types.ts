@@ -56,6 +56,7 @@ export type Session = {
   activeStoryId?: string;
   participants: Participant[];
   timerState?: TimerState;
+  anonymousVoting?: boolean;
 };
 
 export type VoteBreakdown = {

@@ -65,7 +65,7 @@ function numericValue(value) {
   return Number(value);
 }
 
-function summarizeVotes(votes) {
+function summarizeVotes(votes, { anonymousVoting = false } = {}) {
   const distribution = {};
   POKER_VALUES.forEach((v) => { distribution[v] = 0; });
   votes.forEach((vote) => { distribution[vote.voteValue] += 1; });
@@ -103,9 +103,9 @@ function summarizeVotes(votes) {
 
   const consensusValue = consensusReached && mostVoted ? mostVoted[0] : undefined;
 
-  const breakdown = votes.map((vote) => ({
+  const breakdown = votes.map((vote, idx) => ({
     userId: vote.userId,
-    displayName: vote.displayName || vote.userId,
+    displayName: anonymousVoting ? `Voter ${idx + 1}` : (vote.displayName || vote.userId),
     voteValue: vote.voteValue,
     isOutlier: outlierUserIds.includes(vote.userId),
   }));
@@ -199,6 +199,7 @@ exports.handler = async (event) => {
       sessionId,
       teamName: body.teamName,
       createdBy: body.createdBy,
+      anonymousVoting: Boolean(body.anonymousVoting),
       status: 'lobby',
       createdAt: new Date().toISOString(),
       activeStoryId: undefined,
@@ -242,6 +243,7 @@ exports.handler = async (event) => {
         sessionId: session.sessionId,
         teamName: session.teamName,
         createdBy: session.createdBy,
+        anonymousVoting: Boolean(session.anonymousVoting),
         status: session.status,
         createdAt: session.createdAt,
         activeStoryId: session.activeStoryId,
@@ -369,11 +371,13 @@ exports.handler = async (event) => {
         v.roundNumber === session.currentRound
     );
 
+    const participant = session.participants.find((p) => p.userId === body.userId);
     const vote = {
       voteId: `vote-${randomUUID().slice(0, 8)}`,
       sessionId: session.sessionId,
       storyId: body.storyId,
       userId: body.userId,
+      displayName: body.displayName || (participant ? participant.displayName : body.userId),
       voteValue: body.voteValue,
       roundNumber: session.currentRound,
       timestamp: new Date().toISOString(),
@@ -404,7 +408,7 @@ exports.handler = async (event) => {
       (v) => v.storyId === body.storyId && v.roundNumber === session.currentRound
     );
 
-    const summary = summarizeVotes(votes);
+    const summary = summarizeVotes(votes, { anonymousVoting: Boolean(session.anonymousVoting) });
     session.status = 'revealed';
     session.timerState = undefined;
     session.summaries[`${body.storyId}::${session.currentRound}`] = summary;

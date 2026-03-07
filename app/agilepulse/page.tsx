@@ -107,6 +107,7 @@ export default function AgilePulsePage() {
   const [timerDuration, setTimerDuration] = useState<90 | 120 | 150 | 180>(120);
   const [copyToast, setCopyToast] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [anonymousVoting, setAnonymousVoting] = useState(false);
 
   const isOrganizer = useMemo(
     () => !!userId && !!sessionView && sessionView.session.participants[0]?.userId === userId,
@@ -274,7 +275,7 @@ export default function AgilePulsePage() {
         participants: Array<{ userId: string; displayName: string }>;
       }>('/api/agilepulse/sessions', {
         method: 'POST',
-        body: JSON.stringify({ teamName: name, createdBy: creator }),
+        body: JSON.stringify({ teamName: name, createdBy: creator, anonymousVoting }),
       });
 
       if (!created.participants?.length) {
@@ -337,6 +338,7 @@ export default function AgilePulsePage() {
         body: JSON.stringify({
           storyId: activeStory.storyId,
           userId,
+          displayName: sessionView.session.participants.find((p) => p.userId === userId)?.displayName ?? userId,
           voteValue: selectedVote,
         }),
       });
@@ -546,6 +548,17 @@ export default function AgilePulsePage() {
                   aria-label="Your name as it will appear to teammates"
                   maxLength={30}
                 />
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={anonymousVoting}
+                    onChange={(e) => setAnonymousVoting(e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500 dark:border-zinc-600"
+                  />
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Anonymous voting <span className="text-xs text-zinc-400">(names hidden on reveal)</span>
+                  </span>
+                </label>
                 <motion.button
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
@@ -739,7 +752,8 @@ export default function AgilePulsePage() {
               </div>
             </div>
 
-            {/* Add story */}
+            {/* Add story — organizer only */}
+            {isOrganizer && (
             <div className="card p-4">
               <p className="label mb-3">Add Story</p>
               <div className="space-y-2.5">
@@ -770,6 +784,7 @@ export default function AgilePulsePage() {
                   </motion.button>
               </div>
             </div>
+            )}
 
             {/* Story queue */}
             <div className="card p-4">
@@ -888,28 +903,32 @@ export default function AgilePulsePage() {
                     </div>
                   )}
 
-                  {/* Card board */}
-                  <PlanningPokerBoard
-                    selected={selectedVote ?? sessionView.myVote}
-                    onSelect={setSelectedVote}
-                    disabled={Boolean(sessionView.summary)}
-                    hasVoted={hasVoted}
-                    timerActive={!!timerState}
-                  />
+                  {/* Card board — participants only */}
+                  {!isOrganizer && (
+                    <PlanningPokerBoard
+                      selected={selectedVote ?? sessionView.myVote}
+                      onSelect={setSelectedVote}
+                      disabled={Boolean(sessionView.summary)}
+                      hasVoted={hasVoted}
+                      timerActive={!!timerState}
+                    />
+                  )}
                 </>
               )}
 
               {/* Action buttons */}
               <div className="mt-4 flex flex-wrap gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleSubmitVote}
-                  disabled={isBusy || !activeStory || !selectedVote}
-                  className="btn btn-primary text-sm disabled:opacity-60"
-                >
-                  {hasVoted ? 'Update Vote' : 'Submit Vote'}
-                </motion.button>
+                {!isOrganizer && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleSubmitVote}
+                    disabled={isBusy || !activeStory || !selectedVote}
+                    className="btn btn-primary text-sm disabled:opacity-60"
+                  >
+                    {hasVoted ? 'Update Vote' : 'Submit Vote'}
+                  </motion.button>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
