@@ -7,6 +7,7 @@ compatibility_date = "2024-09-23"
 # Remove the trailing slash if present.
 [vars]
 TARGET_ORIGIN = "https://d2bekaxztrnso5.cloudfront.net"
+WS_ORIGIN     = "wss://05vfb7tw59.execute-api.us-east-1.amazonaws.com/prod"
 
 # ── Routes (optional custom domain) ─────────────────────────────────────────
 # Uncomment and fill in if you own a domain managed by Cloudflare:
