@@ -52,11 +52,12 @@ function generateRoomCode() {
 
 // ── Business logic ──────────────────────────────────────────────────────────
 
-function createParticipant(displayName) {
+function createParticipant(displayName, { isObserver = false } = {}) {
   return {
     userId: `user-${randomUUID().slice(0, 8)}`,
     displayName,
     joinedAt: new Date().toISOString(),
+    isObserver,
   };
 }
 
@@ -257,7 +258,7 @@ exports.handler = async (event) => {
       myVote,
       summary,
       votedUserIds: activeVotes.map((v) => v.userId),
-      participantCount: Math.max(0, session.participants.length - 1), // organizer doesn't vote
+      participantCount: Math.max(0, session.participants.filter((p) => !p.isObserver).length - 1), // excludes organizer + observers
     });
   }
 
@@ -279,7 +280,7 @@ exports.handler = async (event) => {
       return response(200, existing);
     }
 
-    const participant = createParticipant(body.displayName);
+    const participant = createParticipant(body.displayName, { isObserver: Boolean(body.isObserver) });
     session.participants.push(participant);
     await saveSessionToDB(session);
     return response(200, participant);
@@ -601,6 +602,58 @@ exports.handler = async (event) => {
       recommendation,
       source: 'heuristic',
     });
+  }
+
+  // POST /agilepulse/sessions/:id/end
+  const endMatch = path.match(/^\/agilepulse\/sessions\/([^/]+)\/end$/);
+  if (method === 'POST' && endMatch) {
+    const session = await getSessionFromDB(endMatch[1]);
+    if (!session) {
+      return response(404, { error: 'Session not found.' });
+    }
+
+    session.status = 'closed';
+    session.activeStoryId = undefined;
+    session.timerState = undefined;
+
+    await saveSessionToDB(session);
+    return response(200, { ok: true, status: session.status });
+  }
+
+  // POST /agilepulse/sessions/:id/skip
+  const skipMatch = path.match(/^\/agilepulse\/sessions\/([^/]+)\/skip$/);
+  if (method === 'POST' && skipMatch) {
+    const session = await getSessionFromDB(skipMatch[1]);
+    if (!session) {
+      return response(404, { error: 'Session not found.' });
+    }
+
+    const activeStory = getActiveStory(session);
+    if (!activeStory) {
+      return response(400, { error: 'No active story to skip.' });
+    }
+
+    // Move active story to end of queue
+    activeStory.orderIndex = session.stories.length + 1;
+    session.stories.sort((a, b) => a.orderIndex - b.orderIndex);
+
+    // Find next unfinalized story (not the one just skipped)
+    const next = session.stories.find(
+      (s) => !s.finalEstimate && s.storyId !== activeStory.storyId
+    );
+
+    if (next) {
+      session.activeStoryId = next.storyId;
+      session.currentRound = 1;
+      session.status = 'voting';
+      session.timerState = undefined;
+    } else {
+      session.activeStoryId = undefined;
+      session.status = 'closed';
+    }
+
+    await saveSessionToDB(session);
+    return response(200, { ok: true, activeStoryId: session.activeStoryId });
   }
 
   return response(404, { error: 'Route not found.', method, path });

@@ -11,6 +11,8 @@ export type SessionEventType =
   | 'votes.revealed'
   | 'round.advanced'
   | 'story.finalized'
+  | 'story.skipped'
+  | 'session.ended'
   | 'timer.started'
   | 'all.voted';
 
@@ -25,6 +27,7 @@ export type Participant = {
   displayName: string;
   avatarUrl?: string;
   joinedAt: string;
+  isObserver?: boolean;
 };
 
 export type StoryItem = {

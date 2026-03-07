@@ -10,6 +10,7 @@ import VotingTimer from '@/components/agilepulse/VotingTimer';
 import AllVotedBanner from '@/components/agilepulse/AllVotedBanner';
 import AIInsightsPanel from '@/components/agilepulse/AIInsightsPanel';
 import FeedbackModal from '@/components/agilepulse/FeedbackModal';
+import SessionSummaryPanel from '@/components/agilepulse/SessionSummaryPanel';
 import {
   PlanningPokerValue,
   SessionAnalytics,
@@ -108,6 +109,8 @@ export default function AgilePulsePage() {
   const [copyToast, setCopyToast] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [anonymousVoting, setAnonymousVoting] = useState(false);
+  const [joinAsObserver, setJoinAsObserver] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const isOrganizer = useMemo(
     () => !!userId && !!sessionView && sessionView.session.participants[0]?.userId === userId,
@@ -300,7 +303,7 @@ export default function AgilePulsePage() {
         `/api/agilepulse/sessions/${code}/join`,
         {
           method: 'POST',
-          body: JSON.stringify({ displayName: joiner }),
+          body: JSON.stringify({ displayName: joiner, isObserver: joinAsObserver }),
         }
       );
 
@@ -447,6 +450,39 @@ export default function AgilePulsePage() {
     } catch {
       setError('Clipboard not available. Copy this link: ' + inviteUrl);
     }
+  };
+
+  const handleEndSession = async () => {
+    if (!sessionId) return;
+    await withBusy(async () => {
+      await apiFetch(`/api/agilepulse/sessions/${sessionId}/end`, { method: 'POST', body: JSON.stringify({}) });
+      setShowEndConfirm(false);
+      setTimerState(null);
+      setShowAllVotedBanner(false);
+      trackEvent('session_ended', { session_id: sessionId });
+    });
+  };
+
+  const handleSkipStory = async () => {
+    if (!sessionId) return;
+    await withBusy(async () => {
+      await apiFetch(`/api/agilepulse/sessions/${sessionId}/skip`, { method: 'POST', body: JSON.stringify({}) });
+      setSelectedVote(undefined);
+      setTimerState(null);
+      setShowAllVotedBanner(false);
+    });
+  };
+
+  const handleNewSession = () => {
+    setSessionId(undefined);
+    setUserId(undefined);
+    setSessionView(undefined);
+    setAnalytics(undefined);
+    setSelectedVote(undefined);
+    setTimerState(null);
+    setShowAllVotedBanner(false);
+    setShowEndConfirm(false);
+    setError(undefined);
   };
 
   // ─── Pre-session screen ───────────────────────────────────────────────────
@@ -603,6 +639,17 @@ export default function AgilePulsePage() {
                   aria-label="Your name as it will appear to teammates"
                   maxLength={30}
                 />
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={joinAsObserver}
+                    onChange={(e) => setJoinAsObserver(e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-600"
+                  />
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Join as Observer <span className="text-xs text-zinc-400">(watch without voting)</span>
+                  </span>
+                </label>
                 <motion.button
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
@@ -727,24 +774,34 @@ export default function AgilePulsePage() {
             <div className="card p-4">
               <p className="label mb-3">Participants</p>
               <div className="flex flex-wrap gap-2">
-                {sessionView.session.participants.map((participant) => {
-                  const didVote = sessionView.votedUserIds?.includes(participant.userId);
+                {sessionView.session.participants.map((participant, idx) => {
+                  const isFacilitator = idx === 0;
+                  const isMe = participant.userId === userId;
+                  const isObs = participant.isObserver;
+                  const didVote = !isObs && !isFacilitator && sessionView.votedUserIds?.includes(participant.userId);
                   return (
                     <motion.div
                       key={participant.userId}
                       whileHover={{ scale: 1.03 }}
                       className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                        didVote
+                        isFacilitator
+                          ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-800'
+                          : isObs
+                          ? 'border border-dashed border-zinc-300 bg-zinc-50 text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400'
+                          : didVote
                           ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:ring-emerald-800'
                           : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
                       }`}
                     >
                       <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-black text-white ${
-                        didVote ? 'bg-emerald-500' : 'bg-violet-500'
+                        isFacilitator ? 'bg-amber-500' : isObs ? 'bg-zinc-400' : didVote ? 'bg-emerald-500' : 'bg-violet-500'
                       }`}>
                         {participant.displayName.slice(0, 2).toUpperCase()}
                       </span>
+                      {isObs && <span>👁</span>}
                       {participant.displayName}
+                      {isMe && <span className="opacity-60">(You)</span>}
+                      {isFacilitator && !isMe && <span className="opacity-60">Facilitator</span>}
                       {didVote && <span className="text-emerald-500">✓</span>}
                     </motion.div>
                   );
@@ -844,6 +901,44 @@ export default function AgilePulsePage() {
                 ))}
               </div>
             </div>
+
+            {/* End Session — organizer only */}
+            {isOrganizer && sessionView.session.status !== 'closed' && (
+              <div className="card p-4">
+                {!showEndConfirm ? (
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowEndConfirm(true)}
+                    className="w-full rounded-lg border border-red-200 bg-red-50 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:border-red-800/50 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    End Session
+                  </motion.button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">End the session for everyone?</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">Unfinalized stories will be marked as skipped.</p>
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleEndSession}
+                        disabled={isBusy}
+                        className="flex-1 rounded-lg bg-red-600 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                      >
+                        {isBusy ? 'Ending…' : 'Yes, End Session'}
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setShowEndConfirm(false)}
+                        className="flex-1 rounded-lg border border-zinc-200 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
+                      >
+                        Cancel
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </aside>
 
           {/* ── Main Content ── */}
@@ -859,12 +954,27 @@ export default function AgilePulsePage() {
               )}
             </AnimatePresence>
 
-            {/* Voting area */}
+            {/* Voting area — or session summary when closed */}
+            {sessionView.session.status === 'closed' ? (
+              <SessionSummaryPanel
+                stories={sessionView.stories}
+                analytics={analytics}
+                teamName={sessionView.session.teamName}
+                onNewSession={handleNewSession}
+              />
+            ) : (
             <div className="card p-5">
               {/* Story header */}
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
-                  <p className="label">Active Story</p>
+                  <div className="flex items-center gap-2">
+                    <p className="label">Active Story</p>
+                    {activeStory && sessionView.stories.length > 0 && (
+                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                        {sessionView.stories.findIndex((s) => s.storyId === activeStory.storyId) + 1} of {sessionView.stories.length}
+                      </span>
+                    )}
+                  </div>
                   {activeStory ? (
                     <>
                       <h2 className="mt-1 text-lg font-bold leading-tight tracking-tight text-zinc-900 dark:text-white">
@@ -876,7 +986,7 @@ export default function AgilePulsePage() {
                     </>
                   ) : (
                     <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                      All stories finalized for this session.
+                      Add a story to start the session.
                     </p>
                   )}
                 </div>
@@ -958,6 +1068,21 @@ export default function AgilePulsePage() {
                     >
                       Finalize Estimate
                     </motion.button>
+                    {/* Skip Story — only show if there is another story to move to */}
+                    {activeStory && sessionView.stories.filter((s) => !s.finalEstimate && s.storyId !== activeStory.storyId).length > 0 && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleSkipStory}
+                        disabled={isBusy}
+                        className="btn btn-secondary text-sm disabled:opacity-60 flex items-center gap-1"
+                      >
+                        Skip Story
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                      </motion.button>
+                    )}
                   </>
                 )}
               </div>
@@ -1008,8 +1133,7 @@ export default function AgilePulsePage() {
                 </motion.div>
               )}
             </div>
-
-            {/* Vote reveal results */}
+            )}
             <AnimatePresence>
               {sessionView.summary && (
                 <VoteRevealPanel summary={sessionView.summary} />

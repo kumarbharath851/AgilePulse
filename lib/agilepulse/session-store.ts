@@ -68,12 +68,13 @@ function emitEvent(sessionId: string, eventType: SessionEvent['eventType'], payl
   listeners?.forEach((listener) => listener(event));
 }
 
-function createParticipant(displayName: string, avatarUrl?: string): Participant {
+function createParticipant(displayName: string, avatarUrl?: string, isObserver = false): Participant {
   return {
     userId: `user-${uuidv4().slice(0, 8)}`,
     displayName,
     avatarUrl,
     joinedAt: new Date().toISOString(),
+    isObserver,
   };
 }
 
@@ -143,7 +144,7 @@ function getSession(sessionId: string): Session | undefined {
   return getSessionState(sessionId)?.session;
 }
 
-function joinSession(sessionId: string, displayName: string, avatarUrl?: string): Participant | undefined {
+function joinSession(sessionId: string, displayName: string, avatarUrl?: string, isObserver = false): Participant | undefined {
   const state = getSessionState(sessionId);
 
   if (!state) {
@@ -158,7 +159,7 @@ function joinSession(sessionId: string, displayName: string, avatarUrl?: string)
     return existing;
   }
 
-  const participant = createParticipant(displayName, avatarUrl);
+  const participant = createParticipant(displayName, avatarUrl, isObserver);
   state.session.participants.push(participant);
 
   emitEvent(sessionId, 'participant.joined', {
@@ -409,7 +410,7 @@ function getSessionView(sessionId: string, userId?: string): SessionView | undef
     myVote,
     summary,
     votedUserIds: activeVotes.map((vote) => vote.userId),
-    participantCount: Math.max(0, state.session.participants.length - 1), // organizer doesn't vote
+    participantCount: Math.max(0, state.session.participants.filter((p) => !p.isObserver).length - 1), // excludes organizer + observers
   };
 }
 
@@ -485,6 +486,46 @@ function startTimer(sessionId: string, durationSeconds: number): TimerState | un
   return timerState;
 }
 
+function endSession(sessionId: string): boolean {
+  const state = getSessionState(sessionId);
+  if (!state) return false;
+
+  state.session.status = 'closed';
+  state.session.activeStoryId = undefined;
+  state.session.timerState = undefined;
+
+  emitEvent(sessionId, 'session.ended', {});
+  return true;
+}
+
+function skipStory(sessionId: string): string | undefined {
+  const state = getSessionState(sessionId);
+  if (!state) return undefined;
+
+  const activeStory = getCurrentStory(state);
+  if (!activeStory) return undefined;
+
+  // Move active story to end of queue
+  activeStory.orderIndex = state.stories.length + 1;
+  state.stories.sort((a, b) => a.orderIndex - b.orderIndex);
+
+  // Find next unfinalized story (not the skipped one)
+  const next = state.stories.find((s) => !s.finalEstimate && s.storyId !== activeStory.storyId);
+
+  if (next) {
+    state.session.activeStoryId = next.storyId;
+    state.currentRound = 1;
+    state.session.status = 'voting';
+    state.session.timerState = undefined;
+  } else {
+    state.session.activeStoryId = undefined;
+    state.session.status = 'closed';
+  }
+
+  emitEvent(sessionId, 'story.skipped', { skippedStoryId: activeStory.storyId });
+  return state.session.activeStoryId;
+}
+
 function subscribe(sessionId: string, callback: (event: SessionEvent) => void): () => void {
   const store = getStore();
   const listeners = store.subscribers.get(sessionId) ?? new Set<(event: SessionEvent) => void>();
@@ -514,6 +555,8 @@ export const agilePulseStore = {
   revealVotes,
   advanceRound,
   finalizeStory,
+  endSession,
+  skipStory,
   getAnalytics,
   startTimer,
   subscribe,

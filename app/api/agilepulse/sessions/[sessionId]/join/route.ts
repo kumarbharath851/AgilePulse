@@ -4,6 +4,7 @@ import { agilePulseStore } from '@/lib/agilepulse/session-store';
 type JoinSessionBody = {
   displayName: string;
   avatarUrl?: string;
+  isObserver?: boolean;
 };
 
 export async function POST(
@@ -20,7 +21,8 @@ export async function POST(
     const participant = agilePulseStore.joinSession(
       params.sessionId,
       body.displayName,
-      body.avatarUrl
+      body.avatarUrl,
+      Boolean(body.isObserver)
     );
 
     if (!participant) {
