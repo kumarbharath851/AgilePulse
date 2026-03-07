@@ -158,8 +158,8 @@ export default function HomePage() {
               <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
               <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </div>
-            <div className="flex-1 rounded-md bg-zinc-100 px-3 py-1 text-xs text-zinc-400 dark:bg-zinc-700 dark:text-zinc-500">
-              app.agilepulse.io · <span className="text-emerald-600 dark:text-emerald-400">● Live</span>
+            <div className="flex-1 rounded-md bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
+              app.agilepulse.io · <span className="text-emerald-700 dark:text-emerald-400">● Live</span>
             </div>
           </div>
           {/* Content preview */}
@@ -326,7 +326,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex-1 pb-2">
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{step}</span>
+                      <span aria-hidden="true" className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{step}</span>
                       <h3 className="text-base font-bold tracking-tight text-zinc-900 dark:text-white">{title}</h3>
                     </div>
                     <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{description}</p>
@@ -340,6 +340,7 @@ export default function HomePage() {
         {/* Bottom CTA */}
         <div className="relative mt-24 overflow-hidden rounded-2xl bg-gradient-brand p-10 text-center shadow-lg">
           <div
+            aria-hidden="true"
             className="absolute inset-0 opacity-[0.07]"
             style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}
           />
@@ -369,7 +370,7 @@ export default function HomePage() {
             </div>
             {/* Info */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                 Built by
               </p>
               <p className="mt-0.5 text-sm font-bold text-zinc-900 dark:text-white">
@@ -391,7 +392,7 @@ export default function HomePage() {
                   </svg>
                   LinkedIn
                 </a>
-                <span className="text-zinc-200 dark:text-zinc-700">|</span>
+                <span aria-hidden="true" className="text-zinc-200 dark:text-zinc-700">|</span>
                 <a
                   href="https://github.com/kumarbharath851"
                   target="_blank"
@@ -410,27 +411,27 @@ export default function HomePage() {
         </div>
 
         {/* Footer */}
-        <footer className="mt-8 flex flex-wrap items-center justify-center gap-1.5 text-xs text-zinc-400">
+        <footer className="mt-8 flex flex-wrap items-center justify-center gap-1.5 text-xs text-zinc-500">
           <span>AgilePulse</span>
-          <span>·</span>
+          <span aria-hidden="true">·</span>
           <span>Built for agile teams</span>
-          <span>·</span>
+          <span aria-hidden="true">·</span>
           <span>Deployed on AWS CloudFront + Lambda</span>
-          <span>·</span>
+          <span aria-hidden="true">·</span>
           <a
             href="https://github.com/kumarbharath851"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            className="hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
           >
             GitHub
           </a>
-          <span>·</span>
+          <span aria-hidden="true">·</span>
           <a
             href="https://www.linkedin.com/in/bharath-k-a865071b6"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            className="hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
           >
             LinkedIn
           </a>

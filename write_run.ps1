@@ -1,0 +1,1 @@
+Set-StrictMode -Offndollar_bytes = [System.Text.Encoding]::UTF8.GetBytes(dollar_content)nWrite-Output done
