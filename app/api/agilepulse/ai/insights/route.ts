@@ -46,10 +46,18 @@ function heuristicInsight(input: AIInsightBody): InsightResult {
   }
 
   const spread = input.distribution
-    ? Object.values(input.distribution).filter(Boolean).length
+    ? (() => {
+        const numericVals = Object.entries(input.distribution)
+          .filter(([, count]) => count > 0)
+          .map(([val]) => Number(val))
+          .filter((v) => !isNaN(v) && isFinite(v));
+        return numericVals.length >= 2
+          ? Math.max(...numericVals) - Math.min(...numericVals)
+          : 0;
+      })()
     : 0;
-  if (spread > 3) riskLevel = 'high';
-  else if (spread > 1) riskLevel = riskLevel === 'low' ? 'medium' : riskLevel;
+  if (spread >= 8) riskLevel = 'high';
+  else if (spread >= 3) riskLevel = riskLevel === 'low' ? 'medium' : riskLevel;
 
   return {
     summary: input.consensusReached

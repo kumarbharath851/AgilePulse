@@ -502,6 +502,11 @@ exports.handler = async (event) => {
       return response(400, { error: 'durationSeconds must be between 30 and 600.' });
     }
 
+    const organizer = session.participants[0];
+    if (!body.userId || !organizer || organizer.userId !== body.userId) {
+      return response(403, { error: 'Only the session organizer can start the timer.' });
+    }
+
     const now = new Date();
     const timerState = {
       startedAt: now.toISOString(),

@@ -11,7 +11,7 @@ type VotingTimerProps = {
 export default function VotingTimer({ expiresAt, durationSeconds, onExpired }: VotingTimerProps) {
   const [secondsLeft, setSecondsLeft] = useState<number>(() => {
     const ms = new Date(expiresAt).getTime() - Date.now();
-    return Math.max(0, Math.ceil(ms / 1000));
+    return Math.max(0, Math.floor(ms / 1000));
   });
   const expiredRef = useRef(false);
 
@@ -19,7 +19,7 @@ export default function VotingTimer({ expiresAt, durationSeconds, onExpired }: V
     expiredRef.current = false;
     const tick = () => {
       const ms = new Date(expiresAt).getTime() - Date.now();
-      const secs = Math.max(0, Math.ceil(ms / 1000));
+      const secs = Math.max(0, Math.floor(ms / 1000));
       setSecondsLeft(secs);
       if (secs === 0 && !expiredRef.current) {
         expiredRef.current = true;

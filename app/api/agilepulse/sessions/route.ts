@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ...session,
-        joinUrl: `/agilepulse?sessionId=${session.sessionId}`,
+        joinUrl: `/agilepulse?join=${session.sessionId}`,
       },
       { status: 201 }
     );

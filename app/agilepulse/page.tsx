@@ -20,6 +20,14 @@ import {
 const DEFAULT_ESTIMATE: PlanningPokerValue = '5';
 const AGILEPULSE_API_BASE = process.env.NEXT_PUBLIC_AGILEPULSE_API_BASE_URL?.replace(/\/$/, '');
 
+type GtagFn = (...args: unknown[]) => void;
+function trackEvent(name: string, params?: Record<string, string | number | boolean>) {
+  try {
+    const w = window as typeof window & { gtag?: GtagFn };
+    if (typeof w.gtag === 'function') w.gtag('event', name, params ?? {});
+  } catch { /* analytics unavailable */ }
+}
+
 function resolveApiUrl(path: string): string {
   if (!AGILEPULSE_API_BASE) {
     return path;
@@ -120,41 +128,60 @@ export default function AgilePulsePage() {
     if (AGILEPULSE_API_BASE) {
       const refreshTimer = setInterval(() => {
         refreshSession().catch(() => undefined);
-      }, 3000);
+      }, 5000);
       return () => clearInterval(refreshTimer);
     }
 
-    const events = new EventSource(`/api/agilepulse/sessions/${sessionId}/events`);
+    let eventsSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let destroyed = false;
 
-    const onAnyEvent = () => {
-      refreshSession().catch(() => undefined);
-    };
+    const connect = () => {
+      if (destroyed) return;
+      eventsSource = new EventSource(`/api/agilepulse/sessions/${sessionId}/events`);
 
-    const onTimerStarted = (evt: MessageEvent) => {
-      try {
-        const data = JSON.parse(evt.data) as { payload: TimerState };
-        setTimerState(data.payload as TimerState);
-      } catch {
+      const onAnyEvent = () => {
         refreshSession().catch(() => undefined);
-      }
+      };
+
+      const onTimerStarted = (evt: MessageEvent) => {
+        try {
+          const data = JSON.parse(evt.data) as { payload: TimerState };
+          if (data.payload?.expiresAt) setTimerState(data.payload);
+        } catch {
+          refreshSession().catch(() => undefined);
+        }
+      };
+
+      const onAllVoted = () => {
+        refreshSession().catch(() => undefined);
+        setShowAllVotedBanner(true);
+      };
+
+      eventsSource.addEventListener('participant.joined', onAnyEvent);
+      eventsSource.addEventListener('story.added', onAnyEvent);
+      eventsSource.addEventListener('vote.submitted', onAnyEvent);
+      eventsSource.addEventListener('votes.revealed', onAnyEvent);
+      eventsSource.addEventListener('round.advanced', onAnyEvent);
+      eventsSource.addEventListener('story.finalized', onAnyEvent);
+      eventsSource.addEventListener('timer.started', onTimerStarted);
+      eventsSource.addEventListener('all.voted', onAllVoted);
+
+      eventsSource.onerror = () => {
+        eventsSource?.close();
+        eventsSource = null;
+        if (!destroyed) {
+          reconnectTimer = setTimeout(connect, 3000);
+        }
+      };
     };
 
-    const onAllVoted = () => {
-      refreshSession().catch(() => undefined);
-      setShowAllVotedBanner(true);
-    };
-
-    events.addEventListener('participant.joined', onAnyEvent);
-    events.addEventListener('story.added', onAnyEvent);
-    events.addEventListener('vote.submitted', onAnyEvent);
-    events.addEventListener('votes.revealed', onAnyEvent);
-    events.addEventListener('round.advanced', onAnyEvent);
-    events.addEventListener('story.finalized', onAnyEvent);
-    events.addEventListener('timer.started', onTimerStarted);
-    events.addEventListener('all.voted', onAllVoted);
+    connect();
 
     return () => {
-      events.close();
+      destroyed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      eventsSource?.close();
     };
   }, [sessionId, refreshSession]);
 
@@ -189,13 +216,19 @@ export default function AgilePulsePage() {
   };
 
   const handleCreateSession = async () => {
+    const name = teamName.trim();
+    const creator = displayName.trim();
+    if (!name) { setError('Team name is required.'); return; }
+    if (name.length > 60) { setError('Team name must be 60 characters or fewer.'); return; }
+    if (!creator) { setError('Your display name is required.'); return; }
+    if (creator.length > 30) { setError('Display name must be 30 characters or fewer.'); return; }
     await withBusy(async () => {
       const created = await apiFetch<{
         sessionId: string;
         participants: Array<{ userId: string; displayName: string }>;
       }>('/api/agilepulse/sessions', {
         method: 'POST',
-        body: JSON.stringify({ teamName, createdBy: displayName }),
+        body: JSON.stringify({ teamName: name, createdBy: creator }),
       });
 
       if (!created.participants?.length) {
@@ -205,26 +238,33 @@ export default function AgilePulsePage() {
       setSessionId(created.sessionId);
       setJoinSessionId(created.sessionId);
       setUserId(created.participants[0].userId);
+      trackEvent('session_created', { session_id: created.sessionId });
     });
   };
 
   const handleJoinSession = async () => {
+    const code = joinSessionId.trim().toUpperCase();
+    const joiner = displayName.trim();
+    if (!code) { setError('Please enter a session code.'); return; }
+    if (!joiner) { setError('Your display name is required.'); return; }
+    if (joiner.length > 30) { setError('Display name must be 30 characters or fewer.'); return; }
     await withBusy(async () => {
       const participant = await apiFetch<{ userId: string }>(
-        `/api/agilepulse/sessions/${joinSessionId}/join`,
+        `/api/agilepulse/sessions/${code}/join`,
         {
           method: 'POST',
-          body: JSON.stringify({ displayName }),
+          body: JSON.stringify({ displayName: joiner }),
         }
       );
 
-      setSessionId(joinSessionId);
+      setSessionId(code);
       setUserId(participant.userId);
+      trackEvent('session_joined', { session_id: code });
     });
   };
 
   const handleAddStory = async () => {
-    if (!sessionId || !newStoryTitle.trim() || !newStoryDescription.trim()) {
+    if (!sessionId || !newStoryTitle.trim()) {
       return;
     }
 
@@ -232,8 +272,8 @@ export default function AgilePulsePage() {
       await apiFetch(`/api/agilepulse/sessions/${sessionId}/stories`, {
         method: 'POST',
         body: JSON.stringify({
-          title: newStoryTitle,
-          description: newStoryDescription,
+          title: newStoryTitle.trim(),
+          description: newStoryDescription.trim(),
         }),
       });
       setNewStoryTitle('');
@@ -254,6 +294,7 @@ export default function AgilePulsePage() {
           voteValue: selectedVote,
         }),
       });
+      trackEvent('vote_submitted', { vote_value: selectedVote });
     });
   };
 
@@ -268,6 +309,7 @@ export default function AgilePulsePage() {
         body: JSON.stringify({ storyId: activeStory.storyId }),
       });
       setTimerState(null);
+      trackEvent('votes_revealed', { session_id: sessionId });
     });
   };
 
@@ -286,8 +328,12 @@ export default function AgilePulsePage() {
     });
   };
 
-  const handleFinalize = async (estimate: PlanningPokerValue) => {
+  const handleFinalize = async (estimate: PlanningPokerValue | undefined) => {
     if (!sessionId || !activeStory) {
+      return;
+    }
+    if (!estimate) {
+      setError('Please select an estimate card before finalizing.');
       return;
     }
     await withBusy(async () => {
@@ -301,6 +347,10 @@ export default function AgilePulsePage() {
       setSelectedVote(undefined);
       setTimerState(null);
       setShowAllVotedBanner(false);
+      trackEvent('story_finalized', {
+        final_estimate: estimate,
+        consensus: Boolean(sessionView?.summary?.consensusReached),
+      });
     });
   };
 
@@ -332,8 +382,9 @@ export default function AgilePulsePage() {
       });
       setTimerState(null);
       await refreshSession();
-    } catch {
-      // swallow auto-reveal error silently
+    } catch (timerError: unknown) {
+      setTimerState(null);
+      setError(timerError instanceof Error ? timerError.message : 'Auto-reveal failed');
     }
   }, [sessionId, activeStory, refreshSession]);
 
@@ -386,6 +437,34 @@ export default function AgilePulsePage() {
               No account needed. Share the link and your team can join instantly.
             </p>
           </div>
+
+          {joinSessionId && !sessionId && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 flex items-center gap-2.5 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800/50 dark:bg-violet-900/20"
+            >
+              <svg className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <p className="text-sm font-medium text-violet-800 dark:text-violet-300">
+                You&apos;ve been invited to join session <span className="font-mono font-black">{joinSessionId}</span> — enter your name to join.
+              </p>
+            </motion.div>
+          )}
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-4 flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {error}
+            </motion.div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Create */}
@@ -444,9 +523,11 @@ export default function AgilePulsePage() {
               <div className="mt-5 space-y-3">
                 <input
                   value={joinSessionId}
-                  onChange={(e) => setJoinSessionId(e.target.value)}
-                  className="input"
+                  onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
+                  className="input font-mono tracking-wider"
                   placeholder="ABC-123"
+                  maxLength={7}
+                  autoCapitalize="characters"
                 />
                 <input
                   value={displayName}
@@ -464,15 +545,6 @@ export default function AgilePulsePage() {
                   {isBusy ? 'Joining…' : 'Join Session'}
                 </motion.button>
               </div>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-3 text-sm font-medium text-red-600 dark:text-red-400"
-                >
-                  {error}
-                </motion.p>
-              )}
             </motion.div>
           </div>
         </main>
@@ -611,18 +683,20 @@ export default function AgilePulsePage() {
                   onChange={(e) => setNewStoryTitle(e.target.value)}
                   className="input text-sm"
                   placeholder="Story title"
+                  maxLength={200}
                 />
                 <input
                   value={newStoryDescription}
                   onChange={(e) => setNewStoryDescription(e.target.value)}
                   className="input text-sm"
-                  placeholder="Story description"
+                  placeholder="Description (optional)"
+                  maxLength={500}
                 />
                 <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleAddStory}
-                    disabled={isBusy || !newStoryTitle || !newStoryDescription}
+                    disabled={isBusy || !newStoryTitle.trim()}
                     className="btn btn-primary w-full py-2 text-xs disabled:opacity-60"
                   >
                     Add Story
@@ -790,7 +864,7 @@ export default function AgilePulsePage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => handleFinalize(sessionView.summary?.consensusValue ?? selectedVote ?? DEFAULT_ESTIMATE)}
+                  onClick={() => handleFinalize(sessionView.summary?.consensusValue ?? selectedVote)}
                   disabled={isBusy || !activeStory || !sessionView.summary}
                   className="btn btn-success text-sm disabled:opacity-60"
                 >

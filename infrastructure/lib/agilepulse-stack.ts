@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigwIntegrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as cloudfrontOrigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
@@ -129,6 +130,10 @@ export class AgilePulseStack extends cdk.Stack {
         NODE_ENV: 'production',
         HOSTNAME: '0.0.0.0',
         NEXT_PUBLIC_AGILEPULSE_API_BASE_URL: httpApi.apiEndpoint,
+        // Set via: cdk deploy --context gaMeasurementId=G-XXXXXXXXXX
+        ...(this.node.tryGetContext('gaMeasurementId')
+          ? { NEXT_PUBLIC_GA_MEASUREMENT_ID: this.node.tryGetContext('gaMeasurementId') as string }
+          : {}),
       },
     });
 
@@ -151,11 +156,31 @@ export class AgilePulseStack extends cdk.Stack {
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
       },
+      // Optional custom domain support.
+      // Pass via CDK context:
+      //   cdk deploy --context customDomain=agilepulse.example.com --context acmCertificateArn=arn:aws:acm:us-east-1:...
+      ...(this.node.tryGetContext('customDomain') && this.node.tryGetContext('acmCertificateArn')
+        ? {
+            domainNames: [this.node.tryGetContext('customDomain') as string],
+            certificate: acm.Certificate.fromCertificateArn(
+              this,
+              'CustomDomainCert',
+              this.node.tryGetContext('acmCertificateArn') as string,
+            ),
+          }
+        : {}),
     });
 
     new cdk.CfnOutput(this, 'AppUrl', {
       value: `https://${distribution.distributionDomainName}`,
       description: 'AgilePulse public application URL',
     });
+
+    if (this.node.tryGetContext('customDomain')) {
+      new cdk.CfnOutput(this, 'CustomDomainUrl', {
+        value: `https://${this.node.tryGetContext('customDomain') as string}`,
+        description: 'AgilePulse custom domain URL (point your DNS CNAME here)',
+      });
+    }
   }
 }

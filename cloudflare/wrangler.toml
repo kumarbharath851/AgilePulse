@@ -1,0 +1,21 @@
+name = "agilepulse"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# ── Deployment target ────────────────────────────────────────────────────────
+# After `cdk deploy`, copy the "AppUrl" output value below.
+# Remove the trailing slash if present.
+[vars]
+TARGET_ORIGIN = "https://REPLACE_WITH_CDK_APP_URL_OUTPUT"
+
+# ── Routes (optional custom domain) ─────────────────────────────────────────
+# Uncomment and fill in if you own a domain managed by Cloudflare:
+# routes = [
+#   { pattern = "agilepulse.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# ── Workers Free tier note ───────────────────────────────────────────────────
+# The free tier provides:
+#   • 100,000 requests/day
+#   • Sub-domain: https://agilepulse.<your-cf-account>.workers.dev
+# No credit card required.  Sign up at https://workers.cloudflare.com

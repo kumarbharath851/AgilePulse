@@ -48,7 +48,7 @@ export function summarizeVotes(votes: VoteRecord[]): VoteSummary {
     .sort((a, b) => b[1] - a[1])[0];
 
   const consensusReached =
-    sorted.length >= 3 &&
+    sorted.length >= 2 &&
     numericSpread <= 3 &&
     (mostVotedEntry?.[1] ?? 0) / Math.max(votes.length, 1) >= 0.6;
 
