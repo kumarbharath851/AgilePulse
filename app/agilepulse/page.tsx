@@ -903,12 +903,12 @@ export default function AgilePulsePage() {
                     </div>
                   )}
 
-                  {/* Card board — participants only */}
-                  {!isOrganizer && (
+                  {/* Card board — hidden from organizer during voting; shown to all after reveal so organizer can pick final estimate */}
+                  {(!isOrganizer || !!sessionView.summary) && (
                     <PlanningPokerBoard
                       selected={selectedVote ?? sessionView.myVote}
                       onSelect={setSelectedVote}
-                      disabled={Boolean(sessionView.summary)}
+                      disabled={false}
                       hasVoted={hasVoted}
                       timerActive={!!timerState}
                     />
