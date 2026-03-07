@@ -128,6 +128,7 @@ export class AgilePulseStack extends cdk.Stack {
         AWS_LAMBDA_EXEC_WRAPPER: '/opt/bootstrap',
         NODE_ENV: 'production',
         HOSTNAME: '0.0.0.0',
+        NEXT_PUBLIC_AGILEPULSE_API_BASE_URL: httpApi.apiEndpoint,
       },
     });
 
