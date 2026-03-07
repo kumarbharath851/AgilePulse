@@ -6,7 +6,7 @@ compatibility_date = "2024-09-23"
 # After `cdk deploy`, copy the "AppUrl" output value below.
 # Remove the trailing slash if present.
 [vars]
-TARGET_ORIGIN = "https://REPLACE_WITH_CDK_APP_URL_OUTPUT"
+TARGET_ORIGIN = "https://d2bekaxztrnso5.cloudfront.net"
 
 # ── Routes (optional custom domain) ─────────────────────────────────────────
 # Uncomment and fill in if you own a domain managed by Cloudflare:

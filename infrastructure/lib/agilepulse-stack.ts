@@ -9,6 +9,8 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as pinpoint from 'aws-cdk-lib/aws-pinpoint';
+import * as ses from 'aws-cdk-lib/aws-ses';
 import * as path from 'path';
 
 export class AgilePulseStack extends cdk.Stack {
@@ -109,6 +111,19 @@ export class AgilePulseStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UserPoolId', { value: users.userPoolId });
     new cdk.CfnOutput(this, 'UserPoolClientId', { value: webClient.userPoolClientId });
 
+    // ── Amazon Pinpoint (analytics) ───────────────────────────────────────────
+    const pinpointApp = new pinpoint.CfnApp(this, 'PinpointApp', { name: 'AgilePulse' });
+    new cdk.CfnOutput(this, 'PinpointAppId', {
+      value: pinpointApp.ref,
+      description: 'Amazon Pinpoint Application ID',
+    });
+
+    // ── Amazon SES (feedback emails) ──────────────────────────────────────────
+    const feedbackEmail = 'kumarbharath851@gmail.com';
+    new ses.EmailIdentity(this, 'FeedbackEmailIdentity', {
+      identity: ses.Identity.email(feedbackEmail),
+    });
+
     // ── Frontend: Next.js standalone via Lambda Web Adapter ──────────────────
 
     const lwaLayer = lambda.LayerVersion.fromLayerVersionArn(
@@ -130,6 +145,8 @@ export class AgilePulseStack extends cdk.Stack {
         NODE_ENV: 'production',
         HOSTNAME: '0.0.0.0',
         NEXT_PUBLIC_AGILEPULSE_API_BASE_URL: httpApi.apiEndpoint,
+        PINPOINT_APP_ID: pinpointApp.ref,
+        FEEDBACK_EMAIL: feedbackEmail,
         // Set via: cdk deploy --context gaMeasurementId=G-XXXXXXXXXX
         ...(this.node.tryGetContext('gaMeasurementId')
           ? { NEXT_PUBLIC_GA_MEASUREMENT_ID: this.node.tryGetContext('gaMeasurementId') as string }
@@ -141,6 +158,24 @@ export class AgilePulseStack extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ['bedrock:InvokeModel'],
         resources: ['*'],
+      })
+    );
+
+    frontendFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['mobiletargeting:PutEvents'],
+        resources: [
+          `arn:aws:mobiletargeting:${this.region}:${this.account}:apps/${pinpointApp.ref}/events`,
+        ],
+      })
+    );
+
+    frontendFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail'],
+        resources: [
+          `arn:aws:ses:${this.region}:${this.account}:identity/${feedbackEmail}`,
+        ],
       })
     );
 

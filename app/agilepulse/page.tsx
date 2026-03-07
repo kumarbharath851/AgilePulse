@@ -9,6 +9,7 @@ import VoteProgressBar from '@/components/agilepulse/VoteProgressBar';
 import VotingTimer from '@/components/agilepulse/VotingTimer';
 import AllVotedBanner from '@/components/agilepulse/AllVotedBanner';
 import AIInsightsPanel from '@/components/agilepulse/AIInsightsPanel';
+import FeedbackModal from '@/components/agilepulse/FeedbackModal';
 import {
   PlanningPokerValue,
   SessionAnalytics,
@@ -21,8 +22,41 @@ const DEFAULT_ESTIMATE: PlanningPokerValue = '5';
 const AGILEPULSE_API_BASE = process.env.NEXT_PUBLIC_AGILEPULSE_API_BASE_URL?.replace(/\/$/, '');
 
 type GtagFn = (...args: unknown[]) => void;
+
+/** Returns a stable anonymous endpoint ID, persisted in localStorage. */
+function getEndpointId(): string {
+  if (typeof window === 'undefined') return 'ssr';
+  let id = localStorage.getItem('ap-eid');
+  if (!id) {
+    id = typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    localStorage.setItem('ap-eid', id);
+  }
+  return id;
+}
+
+/**
+ * Sends a custom event to Amazon Pinpoint via the server-side proxy route.
+ * Falls back silently to Google Analytics (gtag) when the API route is
+ * unavailable (e.g. local dev without Lambda), so development stays easy.
+ */
 function trackEvent(name: string, params?: Record<string, string | number | boolean>) {
   try {
+    const attributes: Record<string, string> = {};
+    const metrics: Record<string, number> = {};
+    for (const [k, v] of Object.entries(params ?? {})) {
+      if (typeof v === 'number') metrics[k] = v;
+      else attributes[k] = String(v);
+    }
+
+    // Fire-and-forget — no await, no UI side-effects.
+    fetch('/api/agilepulse/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventType: name, attributes, metrics, endpointId: getEndpointId() }),
+      keepalive: true,
+    }).catch(() => {});
+
+    // Fallback: also send to gtag if present (local dev / no Pinpoint configured).
     const w = window as typeof window & { gtag?: GtagFn };
     if (typeof w.gtag === 'function') w.gtag('event', name, params ?? {});
   } catch { /* analytics unavailable */ }
@@ -72,6 +106,7 @@ export default function AgilePulsePage() {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [timerDuration, setTimerDuration] = useState<90 | 120 | 150 | 180>(120);
   const [copyToast, setCopyToast] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const isOrganizer = useMemo(
     () => !!userId && !!sessionView && sessionView.session.participants[0]?.userId === userId,
@@ -981,6 +1016,27 @@ export default function AgilePulsePage() {
           </main>
         </div>
       </div>
+
+      {/* Floating feedback button */}
+      <motion.button
+        onClick={() => setShowFeedback(true)}
+        whileHover={{ scale: 1.06 }}
+        whileTap={{ scale: 0.96 }}
+        aria-label="Open feedback form"
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-gradient-brand px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:opacity-90"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z" />
+        </svg>
+        Feedback
+      </motion.button>
+
+      {/* Feedback modal */}
+      <AnimatePresence>
+        {showFeedback && (
+          <FeedbackModal onClose={() => setShowFeedback(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
