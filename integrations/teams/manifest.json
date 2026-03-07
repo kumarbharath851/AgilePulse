@@ -1,0 +1,32 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "9d77c9ac-4fcb-4ef2-b16d-f9ffaf2512aa",
+  "packageName": "com.agilepulse.teams",
+  "developer": {
+    "name": "AgilePulse",
+    "websiteUrl": "https://agilepulse.example.com",
+    "privacyUrl": "https://agilepulse.example.com/privacy",
+    "termsOfUseUrl": "https://agilepulse.example.com/terms"
+  },
+  "name": {
+    "short": "AgilePulse",
+    "full": "AgilePulse Sprint Planning"
+  },
+  "description": {
+    "short": "Collaborative sprint planning and story pointing",
+    "full": "AgilePulse enables collaborative planning poker, outlier analysis, and sprint estimation insights in Microsoft Teams."
+  },
+  "accentColor": "#2563EB",
+  "staticTabs": [
+    {
+      "entityId": "agilepulse-tab",
+      "name": "AgilePulse",
+      "contentUrl": "https://agilepulse.example.com/agilepulse",
+      "websiteUrl": "https://agilepulse.example.com/agilepulse",
+      "scopes": ["personal", "team"]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"]
+}

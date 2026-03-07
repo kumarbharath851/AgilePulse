@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+dist/
+
+# CDK build artifacts
+infrastructure/cdk.out/
+infrastructure/dist/
+infrastructure/node_modules/
+
+# Deploy bundles (generated, not source)
+deploy/
+
+# Environment / secrets
+.env
+.env.local
+.env*.local
+
+# Temp files created by Claude Code CLI
+tmpclaude-*
+infrastructure/tmpclaude-*
+
+# Legacy Elastic Beanstalk files (replaced by CDK)
+Procfile
+deploy_frontend.py
+eb-ec2-trust-policy.json
+eb-service-trust-policy.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
