@@ -55,7 +55,8 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 export default function AgilePulsePage() {
   const [teamName, setTeamName] = useState('Cyber Mavericks');
-  const [displayName, setDisplayName] = useState('Scrum Master');
+  const [createDisplayName, setCreateDisplayName] = useState('Scrum Master');
+  const [joinDisplayName, setJoinDisplayName] = useState('');
   const [joinSessionId, setJoinSessionId] = useState('');
   const [sessionId, setSessionId] = useState<string>();
   const [userId, setUserId] = useState<string>();
@@ -77,13 +78,20 @@ export default function AgilePulsePage() {
     [userId, sessionView]
   );
 
-  // Auto-fill join ID from ?join= query param on initial load
+  // Auto-fill join ID from ?join= query param on initial load + restore dark mode preference
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const joinParam = params.get('join');
       if (joinParam) {
         setJoinSessionId(joinParam);
+      }
+      // Restore dark mode from localStorage or system preference
+      const saved = localStorage.getItem('agilepulse-darkmode');
+      if (saved !== null) {
+        setDarkMode(saved === 'true');
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setDarkMode(true);
       }
     }
   }, []);
@@ -191,6 +199,9 @@ export default function AgilePulsePage() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agilepulse-darkmode', String(darkMode));
+    }
   }, [darkMode]);
 
   const activeStory = sessionView?.activeStory;
@@ -217,7 +228,7 @@ export default function AgilePulsePage() {
 
   const handleCreateSession = async () => {
     const name = teamName.trim();
-    const creator = displayName.trim();
+    const creator = createDisplayName.trim();
     if (!name) { setError('Team name is required.'); return; }
     if (name.length > 60) { setError('Team name must be 60 characters or fewer.'); return; }
     if (!creator) { setError('Your display name is required.'); return; }
@@ -244,7 +255,7 @@ export default function AgilePulsePage() {
 
   const handleJoinSession = async () => {
     const code = joinSessionId.trim().toUpperCase();
-    const joiner = displayName.trim();
+    const joiner = joinDisplayName.trim();
     if (!code) { setError('Please enter a session code.'); return; }
     if (!joiner) { setError('Your display name is required.'); return; }
     if (joiner.length > 30) { setError('Display name must be 30 characters or fewer.'); return; }
@@ -421,6 +432,7 @@ export default function AgilePulsePage() {
           </Link>
           <button
             onClick={() => setDarkMode((v) => !v)}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
           >
             {darkMode ? '☀ Light' : '☾ Dark'}
@@ -455,6 +467,7 @@ export default function AgilePulsePage() {
 
           {error && (
             <motion.div
+              role="alert"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="mb-4 flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
@@ -487,12 +500,16 @@ export default function AgilePulsePage() {
                   onChange={(e) => setTeamName(e.target.value)}
                   className="input"
                   placeholder="Team name"
+                  aria-label="Team name for the planning session"
+                  maxLength={60}
                 />
                 <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  value={createDisplayName}
+                  onChange={(e) => setCreateDisplayName(e.target.value)}
                   className="input"
                   placeholder="Your display name"
+                  aria-label="Your name as it will appear to teammates"
+                  maxLength={30}
                 />
                 <motion.button
                   whileHover={{ scale: 1.01 }}
@@ -528,12 +545,15 @@ export default function AgilePulsePage() {
                   placeholder="ABC-123"
                   maxLength={7}
                   autoCapitalize="characters"
+                  aria-label="Session code — ask the session creator for this code"
                 />
                 <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  value={joinDisplayName}
+                  onChange={(e) => setJoinDisplayName(e.target.value)}
                   className="input"
                   placeholder="Your display name"
+                  aria-label="Your name as it will appear to teammates"
+                  maxLength={30}
                 />
                 <motion.button
                   whileHover={{ scale: 1.01 }}
@@ -592,16 +612,19 @@ export default function AgilePulsePage() {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={handleCopyInviteLink}
+                  aria-label="Copy invite link to clipboard"
                   className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-xs transition hover:border-violet-300 hover:text-violet-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  <span className="hidden sm:block">Copy Invite</span>
+                  <span>Copy Invite</span>
                 </motion.button>
                 <AnimatePresence>
                   {copyToast && (
                     <motion.span
+                      role="status"
+                      aria-live="polite"
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
@@ -616,6 +639,7 @@ export default function AgilePulsePage() {
               {/* Dark mode */}
               <button
                 onClick={() => setDarkMode((v) => !v)}
+                aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                 className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 shadow-xs transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
               >
                 {darkMode ? '☀' : '☾'}
@@ -637,10 +661,16 @@ export default function AgilePulsePage() {
                 <div className="flex items-start gap-3">
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=64x64&data=${encodeURIComponent(inviteUrl)}`}
-                    alt="Invite QR"
+                    alt="QR code — scan with your phone camera to join this session instantly"
+                    title="Scan with phone camera to join"
                     className="h-12 w-12 shrink-0 rounded-lg border border-zinc-100 dark:border-zinc-800"
                   />
-                  <p className="break-all text-xs text-zinc-500 dark:text-zinc-400">{inviteUrl}</p>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 mb-1">
+                      📱 Scan to join, or copy the link →
+                    </p>
+                    <p className="break-all text-xs text-zinc-500 dark:text-zinc-400">{inviteUrl}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -683,6 +713,7 @@ export default function AgilePulsePage() {
                   onChange={(e) => setNewStoryTitle(e.target.value)}
                   className="input text-sm"
                   placeholder="Story title"
+                  aria-label="Story title (required)"
                   maxLength={200}
                 />
                 <input
@@ -690,6 +721,7 @@ export default function AgilePulsePage() {
                   onChange={(e) => setNewStoryDescription(e.target.value)}
                   className="input text-sm"
                   placeholder="Description (optional)"
+                  aria-label="Story description (optional)"
                   maxLength={500}
                 />
                 <motion.button
@@ -875,10 +907,12 @@ export default function AgilePulsePage() {
               {/* PO timer controls */}
               {isOrganizer && activeStory && !sessionView.summary && !timerState && (
                 <div className="mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                  <span className="label">Timer</span>
+                  <label htmlFor="timer-duration" className="label">Timer</label>
                   <select
+                    id="timer-duration"
                     value={timerDuration}
                     onChange={(e) => setTimerDuration(Number(e.target.value) as 90 | 120 | 150 | 180)}
+                    aria-label="Select voting time limit"
                     className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs font-semibold text-zinc-700 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                   >
                     <option value={90}>1.5 min</option>
@@ -904,6 +938,7 @@ export default function AgilePulsePage() {
               {/* Error */}
               {error && (
                 <motion.div
+                  role="alert"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="mt-3 flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"

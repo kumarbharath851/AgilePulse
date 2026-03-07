@@ -42,8 +42,13 @@ export default function VotingTimer({ expiresAt, durationSeconds, onExpired }: V
   const label = `${minutes}:${String(secs).padStart(2, '0')}`;
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <svg width={52} height={52} viewBox="0 0 52 52">
+    <div
+      className="flex flex-col items-center gap-0.5"
+      role="timer"
+      aria-label={`${isUrgent ? 'Hurry! ' : ''}${label} remaining`}
+      aria-live={isUrgent ? 'assertive' : 'off'}
+    >
+      <svg width={52} height={52} viewBox="0 0 52 52" aria-hidden="true">
         {/* Track */}
         <circle
           cx={26}

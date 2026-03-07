@@ -25,6 +25,8 @@ export default function PlanningPokerBoard({
       <AnimatePresence>
         {needsVote && (
           <motion.div
+            role="alert"
+            aria-live="polite"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -39,6 +41,8 @@ export default function PlanningPokerBoard({
       </AnimatePresence>
 
       <motion.div
+        role="group"
+        aria-label="Select your estimate"
         className={`grid grid-cols-5 gap-2 rounded-xl p-1 sm:grid-cols-10 ${
           needsVote ? 'ring-2 ring-amber-400 ring-offset-2 dark:ring-offset-zinc-900' : ''
         }`}
@@ -51,6 +55,7 @@ export default function PlanningPokerBoard({
       >
         {PLANNING_POKER_VALUES.map((value) => {
           const isSelected = selected === value;
+          const cardLabel = value === 'coffee' ? 'Coffee break' : value === '?' ? 'Uncertain' : `${value} points`;
 
           return (
             <motion.button
@@ -59,7 +64,9 @@ export default function PlanningPokerBoard({
               whileTap={{ scale: disabled ? 1 : 0.93 }}
               onClick={() => onSelect(value)}
               disabled={disabled}
-              className={`relative rounded-xl border-2 px-2 py-4 text-base font-black transition-all duration-150 ${
+              aria-label={`Vote ${cardLabel}${isSelected ? ' (selected)' : ''}`}
+              aria-pressed={isSelected}
+              className={`relative rounded-xl border-2 px-2 py-4 text-base font-black transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900 ${
                 isSelected
                   ? 'border-violet-500 bg-violet-600 text-white shadow-glow'
                   : 'border-zinc-200 bg-white text-zinc-700 hover:border-violet-300 hover:shadow-card dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-violet-700'

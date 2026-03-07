@@ -10,6 +10,8 @@ type AllVotedBannerProps = {
 export default function AllVotedBanner({ onReveal, onDismiss }: AllVotedBannerProps) {
   return (
     <motion.div
+      role="alert"
+      aria-live="polite"
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -16 }}
@@ -38,6 +40,7 @@ export default function AllVotedBanner({ onReveal, onDismiss }: AllVotedBannerPr
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={onReveal}
+            aria-label="Reveal all votes and show consensus"
             className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 active:scale-[0.98]"
           >
             Reveal Now
@@ -46,6 +49,7 @@ export default function AllVotedBanner({ onReveal, onDismiss }: AllVotedBannerPr
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={onDismiss}
+            aria-label="Dismiss this notification"
             className="rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
           >
             Dismiss
