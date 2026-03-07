@@ -85,7 +85,7 @@ export default function VotingTimer({ expiresAt, durationSeconds, onExpired }: V
           {label}
         </text>
       </svg>
-      <span className={`text-[10px] font-semibold ${isUrgent ? 'text-red-500' : 'text-zinc-400 dark:text-zinc-500'}`}>
+      <span className={`text-[10px] font-semibold ${isUrgent ? 'text-red-500' : 'text-zinc-500 dark:text-zinc-400'}`}>
         {isUrgent ? 'Hurry!' : 'Time left'}
       </span>
     </div>

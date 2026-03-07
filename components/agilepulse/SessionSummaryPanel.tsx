@@ -58,7 +58,7 @@ export default function SessionSummaryPanel({ stories, analytics, teamName, onNe
             { label: 'Avg Spread', value: analytics?.avgSpread ?? 0 },
           ].map(({ label, value }) => (
             <div key={label} className="py-3 px-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{label}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{label}</p>
               <p className="mt-0.5 text-2xl font-black text-zinc-900 dark:text-white">{value}</p>
             </div>
           ))}
@@ -84,7 +84,7 @@ export default function SessionSummaryPanel({ stories, analytics, teamName, onNe
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-zinc-900 dark:text-white">{story.title}</p>
                 {story.description && (
-                  <p className="truncate text-xs text-zinc-400 dark:text-zinc-500">{story.description}</p>
+                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{story.description}</p>
                 )}
               </div>
               {story.finalEstimate ? (
@@ -99,12 +99,12 @@ export default function SessionSummaryPanel({ stories, analytics, teamName, onNe
             </motion.div>
           ))}
           {stories.length === 0 && (
-            <p className="text-sm text-zinc-400 dark:text-zinc-500">No stories were added to this session.</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">No stories were added to this session.</p>
           )}
         </div>
 
         {skipped.length > 0 && (
-          <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">
+          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
             {skipped.length} {skipped.length === 1 ? 'story was' : 'stories were'} skipped and not estimated.
           </p>
         )}

@@ -153,8 +153,8 @@ h1, h2, h3, h4 { letter-spacing: -0.03em; }
   .badge-zinc { @apply badge bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400; }
   .badge-blue { @apply badge bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300; }
 
-  /* Labels */
-  .label { @apply text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500; }
+  /* Labels — zinc-500 on white = 4.88:1, passes WCAG AA */
+  .label { @apply text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400; }
 
   /* Divider */
   .divider { @apply h-px w-full bg-zinc-100 dark:bg-zinc-800; }
@@ -167,6 +167,23 @@ h1, h2, h3, h4 { letter-spacing: -0.03em; }
     @apply nav-item bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300;
   }
 }
+
+/* ─── Skip Navigation ─────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--color-brand);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 0; outline: 2px solid #fff; outline-offset: 2px; }
 
 /* ─── Skeleton Loader ─────────────────────────────────────── */
 @keyframes shimmer {
@@ -226,4 +243,18 @@ h1, h2, h3, h4 { letter-spacing: -0.03em; }
 .dark .glass {
   background: rgba(24, 24, 27, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ─── Reduced Motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-float,
+  .animate-fade-in,
+  .skeleton { animation: none !important; }
+  .card-flip, .card-flip:hover { transform: none !important; transition: none !important; }
 }

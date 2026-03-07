@@ -56,6 +56,7 @@ export default function VoteRevealPanel({ summary }: VoteRevealPanelProps) {
           className="relative overflow-hidden rounded-xl bg-gradient-brand p-5 text-center"
         >
           <div
+            aria-hidden="true"
             className="absolute inset-0 opacity-[0.07]"
             style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '20px 20px' }}
           />

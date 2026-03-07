@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type FeedbackModalProps = {
@@ -13,6 +13,11 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
   const [workedWell, setWorkedWell] = useState('');
   const [toImprove, setToImprove] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +44,7 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
       {/* Backdrop */}
       <motion.div
@@ -63,6 +69,7 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
         {/* Header */}
         <div className="relative overflow-hidden bg-gradient-brand px-6 py-5">
           <div
+            aria-hidden="true"
             className="absolute inset-0 opacity-[0.06]"
             style={{
               backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
@@ -79,6 +86,7 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
               </p>
             </div>
             <button
+              ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close feedback form"
               className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"

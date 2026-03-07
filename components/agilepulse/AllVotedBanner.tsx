@@ -20,6 +20,7 @@ export default function AllVotedBanner({ onReveal, onDismiss }: AllVotedBannerPr
     >
       {/* subtle dot pattern */}
       <div
+        aria-hidden="true"
         className="absolute inset-0 opacity-[0.06]"
         style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '20px 20px' }}
       />

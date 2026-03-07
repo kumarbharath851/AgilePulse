@@ -496,6 +496,7 @@ export default function AgilePulsePage() {
         </div>
 
         {/* Navbar */}
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         <nav className="relative z-10 flex items-center justify-between px-6 py-4 sm:px-10">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-brand shadow-sm">
@@ -512,7 +513,7 @@ export default function AgilePulsePage() {
           </button>
         </nav>
 
-        <main className="relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-10 sm:px-6">
+        <main id="main-content" className="relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-10 sm:px-6">
           <div className="mb-8 text-center">
             <p className="label mb-2">Planning Poker</p>
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white sm:text-4xl">
@@ -677,6 +678,7 @@ export default function AgilePulsePage() {
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
 
         {/* Top Navbar */}
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/90 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/90">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
@@ -942,7 +944,7 @@ export default function AgilePulsePage() {
           </aside>
 
           {/* ── Main Content ── */}
-          <main className="space-y-4 lg:col-span-8">
+          <main id="main-content" className="space-y-4 lg:col-span-8">
 
             {/* All-voted banner */}
             <AnimatePresence>
