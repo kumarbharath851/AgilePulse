@@ -205,12 +205,19 @@ export default function AgilePulsePage() {
         setShowAllVotedBanner(true);
       };
 
+      const onStoryFinalized = () => {
+        refreshSession().catch(() => undefined);
+        setSelectedVote(undefined);
+        setTimerState(null);
+        setShowAllVotedBanner(false);
+      };
+
       eventsSource.addEventListener('participant.joined', onAnyEvent);
       eventsSource.addEventListener('story.added', onAnyEvent);
       eventsSource.addEventListener('vote.submitted', onAnyEvent);
       eventsSource.addEventListener('votes.revealed', onAnyEvent);
       eventsSource.addEventListener('round.advanced', onAnyEvent);
-      eventsSource.addEventListener('story.finalized', onAnyEvent);
+      eventsSource.addEventListener('story.finalized', onStoryFinalized);
       eventsSource.addEventListener('timer.started', onTimerStarted);
       eventsSource.addEventListener('all.voted', onAllVoted);
 
